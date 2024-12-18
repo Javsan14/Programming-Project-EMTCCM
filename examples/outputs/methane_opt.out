@@ -11,7 +11,7 @@ New internal coordinates:
     1.1128    1.1082    1.1229    1.0984    1.7459    2.0828    1.9137    2.0478    1.7787    1.8700
 New gradient (in internal coordinates):
     1.965738   -1.293958    9.053418   -8.130507  -11.789074   11.754145   -0.027042    9.337072   -9.462348   -3.123228
-Old energy:     0.000000 kcal/mol
+Old energy:     5.106778 kcal/mol
 New energy:     3.423466 kcal/mol
 GRMS:    10.7071
 

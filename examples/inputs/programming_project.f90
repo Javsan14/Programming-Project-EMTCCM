@@ -23,9 +23,6 @@ program geom_opt
     write(*,*)
     read(*,'(a)') input_file
     write(*,*)
-    
-    ! Create expectation
-    write(*,*) '*drum roll*'
 
     ! Find the position of the ".mol2" extension
     ext_pos = index(input_file, '.mol2')
@@ -123,6 +120,9 @@ program geom_opt
     ! Initialize the RMS gradient (convergence criteria) and the step number
     rms_grad = 1.0d0
     step = 0
+
+    ! Finally, create expectation
+    write(*,*) '*drum roll*'
     
     ! Main loop of the optimization algorithm: BFGS in internal coordinates
     do while (rms_grad .ge. threshold)
