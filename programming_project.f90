@@ -5,7 +5,7 @@ program geom_opt
     integer*4 :: i, j, natoms, nbonds, ncatoms, ncbonds, nangles, ndihedrals, npairs, nq
     integer*4 :: bending_terms(300,3), dihedral_terms(500,4), step, cartesian_count, ext_pos
     character(len=1), allocatable :: symbol(:)
-    character(len=100) :: input_file, output_file, out_xyz_file
+    character(len=256) :: input_file, output_file, out_xyz_file
     logical :: file_exists
     integer*4, allocatable :: list_bonds(:,:), atom_pairs(:,:)
     real*8, parameter :: threshold = 0.001d0, cartesian_thresh = 0.00001d0, pi = acos(-1.0d0)
@@ -20,7 +20,7 @@ program geom_opt
     ! Read the value of the filename (.mol2 file) variable from the user
     write(*,*) 'Welcome, please enter the name of the mol2 file of the molecule to optimize:'
     write(*,*)
-    read(*,*) input_file
+    read(*,'(a)') input_file
     write(*,*)
 
     ! Find the position of the ".mol2" extension
@@ -39,10 +39,13 @@ program geom_opt
     ! Store the nq value for the Wilson B matrix
     nq = nbonds + 6*ncatoms + 9*ncbonds
     
-    ! We call the three subroutines to obtain the internal coordinates
+    ! We call the subroutines to obtain the internal coordinates
+    ! - Bond lengths and stretching energy
     call get_bond_lenghts_and_stretching(coord_mat, symbol, list_bonds, nbonds, bond_lengths, total_stretch_E)
+    ! - Bending angles and bending energy
     call get_bending_terms_and_energy(coord_mat, symbol, list_bonds, nbonds, &
     bending_terms, angle_values, nangles, total_bend_E)
+    ! - Dihedral angles and torsional energy
     call get_dihedral_terms_and_energy(coord_mat, symbol, bending_terms, nangles, &
     dihedral_terms, dihedral_values, ndihedrals, total_torsion_E)
     allocate(int_coord(nq))
@@ -94,7 +97,6 @@ program geom_opt
     allocate(diff_coord(3*natoms))
 
     write(*,*) '*drum roll*'
-    write(*,*)
 
     ! Open the output file for writing
     open(unit=10, file=output_file, status='replace', action='write')
@@ -124,7 +126,7 @@ program geom_opt
         call get_dihedral_gradient(coord_mat, dihedral_terms, dihedral_values, ndihedrals, torsion_G)
         call get_pairs_gradient(coord_mat, symbol, atom_pairs, npairs, LJ_G)
         ! Total energy and gradient in Cartesian coordinates
-        total_E = total_stretch_E + total_bend_E + total_torsion_E + total_LJ_E
+        !total_E = total_stretch_E + total_bend_E + total_torsion_E + total_LJ_E
         total_G = stretch_G + bend_G + torsion_G + LJ_G
         ! 2. Compute Wilson's B matrix and its inverse G matrix for the transformation to internal coordinates
         call get_wilson_b_mat(coord_mat, natoms, nq, nbonds, list_bonds, bond_lengths, &
@@ -184,13 +186,6 @@ program geom_opt
             enddo
             coord = new_coord ! Update Cartesian coordinates for next step
             cartesian_count = cartesian_count + 1
-            !write(10, '(a,i3)') "Cartesian iteration number: ", cartesian_count
-            !write(10, '(a,3f12.6)') "dx: ", diff_coord(1), diff_coord(2), diff_coord(3)
-            !write(10, '(a,3f12.6)') "New s vector: ", update_int_coord(1) - int_coord(1), update_int_coord(2) - &
-            !                                         int_coord(2), update_int_coord(3) - int_coord(3)
-            !write(10, '(a,3f12.6)') "New cartesians: ", new_coord(1), new_coord(2), new_coord(3)
-            !write(10, '(a,f12.6)') "diff_coord max: ", maxval(abs(diff_coord))
-            !write(10, *)
         enddo
 
         ! 6. Recalculate step vector based on the final optimal internal coordinates
@@ -230,15 +225,8 @@ program geom_opt
         new_inv_hess = inv_hess + (outer_big_s)/((dot_product(s_vec,y_vec))**2) - &
         (outer_v_s + outer_s_v)/(dot_product(s_vec,y_vec))
 
-        ! 10. Update variables and compute convergence criteria
-        coord = new_coord
-        int_coord = update_int_coord
-        inv_hess = new_inv_hess
+        ! 10. Compute convergence criteria and print output info
         call get_rms(3*natoms, total_G, rms_grad) ! Recalculate RMS gradient for convergence check
-        
-        ! Print information about the step in the output file
-        !write(10, '(a)') "p vector:"
-        !write(10, '(10f12.6)') (p_vec(i), i = 1, size(p_vec))
 
         write(10, '(a)') "Search direction vector after cartesian iteration (s_k):"
         write(10, '(10f12.6)') (s_vec(i), i = 1, size(s_vec))
@@ -257,12 +245,14 @@ program geom_opt
         write(10, '(a,f12.6,a)') "Old energy: ", total_E, ' kcal/mol'
         write(10, '(a,f12.6,a)') "New energy: ", new_total_E, ' kcal/mol'
         write(10, '(a,f10.4)') "GRMS: ", rms_grad
-
-        !write(10, '(a)') "Updated inverse Hessian:"
-        !do i = 1, nq
-        !    write(10, '(10f10.4)') (new_inv_hess(i, j), j = 1, nq)
-        !end do
         write(10, *)  ! Blank line for readability
+
+        ! 11. Update variables for the next step of the optimization
+        coord = new_coord
+        int_coord = update_int_coord
+        inv_hess = new_inv_hess
+        total_E = new_total_E
+        total_G_int = new_total_G_int
     enddo
 
     ! Close the output file
@@ -297,7 +287,7 @@ program geom_opt
     do i = 1, natoms
         write(*, '(3f12.6)') (new_coord(3*i - 2:3*i))
     end do
-    write(*, '(a,f12.6,a)') 'Energy at minimum: ', new_total_E, ' kcal/mol'
+    write(*, '(a,f14.8,a)') 'Energy at minimum: ', new_total_E, ' kcal/mol'
     write(*,*)
     write(*, '(A, A, A)') 'Info about the optimization saved in ', trim(adjustl(output_file)), ','
     write(*, '(A, A, A)') 'and final coordinates saved in ', trim(adjustl(out_xyz_file)), '.'
@@ -316,34 +306,56 @@ contains
         ! This subroutine reads a .mol2 file and extracts atomic symbols, Cartesian coordinates, 
         ! bond information, and counts of atoms and bonds.
         implicit none
-        character(len=100), intent(in) :: mol2_file
+        character(len=*), intent(in) :: mol2_file
+        integer :: i, ierr
         integer*4, intent(out) :: natoms, nbonds, ncatoms, ncbonds
         character(len=1), allocatable, intent(out) :: symbol_array(:)
         integer*4, allocatable, intent(out) :: bonds_list(:,:)
         real*8, allocatable, intent(out) :: coord_mat(:,:)
 
-        ! Check if the file exists
-        inquire(file=mol2_file, exist=file_exists)
+        ! Normalize and check if file exists
+        inquire(file=trim(adjustl(mol2_file)), exist=file_exists)
         if (.not. file_exists) then
             write(*,*) 'Error: File does not exist: ', trim(mol2_file)
             stop
         endif
 
         ! Open the file
-        open(2, file=mol2_file, status='old', action='read')
+        open(unit=2, file=trim(mol2_file), status='old', action='read', iostat=ierr)
+        if (ierr /= 0) then
+            write(*,*) 'Error: Could not open file: ', trim(mol2_file)
+            stop
+        endif
 
-        ! Read data from the file and allocate the different arrays
-        read(2,*) natoms, nbonds, ncatoms, ncbonds
+        ! Read the header data
+        read(2,*, iostat=ierr) natoms, nbonds, ncatoms, ncbonds
+        if (ierr /= 0 .or. natoms <= 0 .or. nbonds <= 0) then
+            write(*,*) 'Error: Invalid mol2 file format.'
+            stop
+        endif
+
+        ! Allocate arrays
         allocate(symbol_array(natoms))
-        allocate(coord_mat(natoms,3))
-        allocate(bonds_list(nbonds,2))
-        do i=1,natoms
-            read(2,*) (coord_mat(i,j), j=1,3), symbol_array(i)
-        enddo
+        allocate(coord_mat(natoms, 3))
+        allocate(bonds_list(nbonds, 2))
 
-        do i=1,nbonds
-            read(2,*) (bonds_list(i,j), j=1,2)
-        enddo
+        ! Read atoms
+        do i = 1, natoms
+            read(2,*, iostat=ierr) (coord_mat(i, j), j = 1, 3), symbol_array(i)
+            if (ierr /= 0) then
+                write(*,*) 'Error: Failed to read atom data at line ', i
+                stop
+            endif
+        end do
+
+        ! Read bonds
+        do i = 1, nbonds
+            read(2,*, iostat=ierr) (bonds_list(i, j), j = 1, 2)
+            if (ierr /= 0) then
+                write(*,*) 'Error: Failed to read bond data at line ', i
+                stop
+            endif
+        end do
 
         ! Close the file
         close(2)
@@ -364,7 +376,7 @@ contains
         integer*4, intent(in) :: nbonds, bonds_list(:,:)
         real*8, intent(in) :: coord_mat(:,:)
         integer*4 :: atom1, atom2
-        real*8, parameter :: cc_r = 1.5300d0, ch_r = 1.1100d0, cc_k = 300d0, ch_k = 350d0
+        real*8, parameter :: cc_r = 1.5300d0, ch_r = 1.1100d0, cc_k = 300.0d0, ch_k = 350.0d0
         real*8, allocatable :: stretch_E(:)
         real*8, allocatable, intent(out) ::  bond_lengths(:)
         real*8, intent(out) :: total_stretch_E
@@ -799,9 +811,13 @@ contains
         integer*4, intent(in) :: nbonds, nangles, natoms, bond_list(:,:), bending_terms(:,:)
         real*8, intent(in) :: coord_mat(:,:)
         integer*4 :: i, j, k, is_bonded, is_angle, atom1, atom2, nvdws
-        real*8, parameter :: A_HH = 4382.44d0, B_HH = 22.932d0
-        real*8, parameter :: A_HC = 64393.99d0, B_HC = 108.644d0
-        real*8, parameter :: A_CC = 946181.74d0, B_CC = 514.714d0
+        real*8, parameter :: sig_c = 1.75d0, sig_h = 1.20d0, eps_c = 0.07d0, eps_h = 0.03d0
+        real*8, parameter :: sig_cc = 2*sig_c, eps_cc = eps_c
+        real*8, parameter :: sig_hh = 2*sig_h, eps_hh = eps_h
+        real*8, parameter :: sig_hc = 2*sqrt(sig_h*sig_c), eps_hc = sqrt(eps_h*eps_c)
+        real*8, parameter :: A_HH = 4*eps_hh*(sig_hh**12), B_HH = 4*eps_hh*(sig_hh**6)
+        real*8, parameter :: A_HC = 4*eps_hc*(sig_hc**12), B_HC = 4*eps_hc*(sig_hc**6)
+        real*8, parameter :: A_CC = 4*eps_cc*(sig_cc**12), B_CC = 4*eps_cc*(sig_cc**6)
         real*8 :: rij(3), dist, Aij, Bij, r2_inv, r6_inv, r12_inv
         real*8, allocatable :: LJ_E(:)
         integer*4, intent(out) :: npairs
@@ -899,9 +915,13 @@ contains
         integer*4, intent(in) :: atom_pairs(:,:), npairs
         real*8, intent(in) :: coord_mat(:,:)
         integer*4 :: i, atom1, atom2
-        real*8, parameter :: A_HH = 4382.44d0, B_HH = 22.932d0
-        real*8, parameter :: A_HC = 64393.99d0, B_HC = 108.644d0
-        real*8, parameter :: A_CC = 946181.74d0, B_CC = 514.714d0
+        real*8, parameter :: sig_c = 1.75d0, sig_h = 1.20d0, eps_c = 0.07d0, eps_h = 0.03d0
+        real*8, parameter :: sig_cc = 2*sig_c, eps_cc = eps_c
+        real*8, parameter :: sig_hh = 2*sig_h, eps_hh = eps_h
+        real*8, parameter :: sig_hc = 2*sqrt(sig_h*sig_c), eps_hc = sqrt(eps_h*eps_c)
+        real*8, parameter :: A_HH = 4*eps_hh*(sig_hh**12), B_HH = 4*eps_hh*(sig_hh**6)
+        real*8, parameter :: A_HC = 4*eps_hc*(sig_hc**12), B_HC = 4*eps_hc*(sig_hc**6)
+        real*8, parameter :: A_CC = 4*eps_cc*(sig_cc**12), B_CC = 4*eps_cc*(sig_cc**6)
         real*8 :: rij(3), dist, Aij, Bij, r2_inv, r8_inv, r14_inv, gradient_mat(natoms,3), LJ_G(natoms,3)
         real*8, intent(out) :: vec_LJ_G(natoms*3)
 
