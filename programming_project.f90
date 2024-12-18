@@ -125,8 +125,7 @@ program geom_opt
         call get_bending_gradient(coord_mat, symbol, natoms, bending_terms, angle_values, nangles, bend_G)
         call get_dihedral_gradient(coord_mat, dihedral_terms, dihedral_values, ndihedrals, torsion_G)
         call get_pairs_gradient(coord_mat, symbol, atom_pairs, npairs, LJ_G)
-        ! Total energy and gradient in Cartesian coordinates
-        !total_E = total_stretch_E + total_bend_E + total_torsion_E + total_LJ_E
+        ! Total gradient in Cartesian coordinates
         total_G = stretch_G + bend_G + torsion_G + LJ_G
         ! 2. Compute Wilson's B matrix and its inverse G matrix for the transformation to internal coordinates
         call get_wilson_b_mat(coord_mat, natoms, nq, nbonds, list_bonds, bond_lengths, &
