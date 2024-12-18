@@ -7,7 +7,7 @@ LIBS = -llapack
 # Files
 SOURCES = programming_project.f90
 OBJECTS = $(SOURCES:.f90=.o)
-EXECUTABLE = program
+EXECUTABLE = optimize_alkane
 
 # Default rule
 all: $(EXECUTABLE)

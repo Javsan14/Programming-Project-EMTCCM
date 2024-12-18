@@ -1,0 +1,79 @@
+Geomery Optimization Program for Alkanes
+========================================
+
+This program optimizes molecular geometries of alkanes based on '.mol2' input files. It computes and outputs optimized geometries and logs detailed information about the optimization process. It is the main assignment of a subject of the second year of the EMTCCM Master Programme.
+
+--------
+Features
+--------
+- Reads molecular data from '.mol2' files.
+- Computes energies using a simple MD force-field potential
+- Performs BFGS geometry optimization in internal coordinates with detailed step-by-step logging.
+- Outputs:
+  - Optimization Log: '<input_file_basename>_opt.out'.
+  - Final Geometry: '<input_file_basename>_opt.xyz'.
+
+------------
+Requirements
+------------
+- Fortran Compiler: 'gfortran'.
+- LAPACK library for linear algebra.
+
+----------------------
+Installation and Usage
+----------------------
+1. Build the Program:
+   Ensure you have 'gfortran' and LAPACK installed, then run:
+
+> make
+
+This will produce an executable named 'optimize_alkane'.
+
+2. Run the Program:
+Provide the '.mol2' file path as input (here for instance 'ethane.mol2') after executing the 'optimize_alkanes':
+
+> ./optimize_alkane
+
+Welcome, please enter the name of the mol2 file of the molecule to optimize:
+
+> ethane.mol2
+
+3. Output:
+- Optimization logs are saved in 'ethane_opt.out'.
+- Final optimized geometry is saved in 'ethane_opt.xyz'.
+- Additionally, the most important info is printed in the terminal as a summary:
+
+ *drum roll*
+ Tadaaaaa
+
+Optimization succesfully converged after  19 steps!
+Final cartesian coordinates:
+   -0.765275    0.009060    0.062448
+    0.765276    0.003440    0.025052
+   -1.115305    0.718751    0.841056
+   -1.159946    0.322944   -0.926553
+   -1.134873   -1.010425    0.300069
+    1.159947   -0.310436    1.014055
+    1.134872    1.022922   -0.212576
+    1.115304   -0.706257   -0.753552
+Energy at minimum:    -0.18518368 kcal/mol
+
+Info about the optimization saved in ethane_opt.out,
+and final coordinates saved in ethane_opt.xyz.
+
+-----------------
+Input File Format
+-----------------
+- '.mol2' File:
+- First line: Number of atoms, bonds, number of C atoms, and number of C-C bonds.
+- Atom data: Coordinates and symbols (one atom per line).
+- Bond data: Connectivity pairs (one bond per line).
+
+Examples of both mol2 input files and expected outputs for them are stored in the directory 'examples' (examples/inputs and examples/outputs, respectively).
+
+---------------
+Acknowledgments
+---------------
+Many thanks to Jeremy Harvey from KU Leuven, professor of the subject and amazing help during the writing of the code, providing useful indications, inputs and debugging output.
+Additionally, this program uses LAPACK for linear algebra computations. Special thanks to the Fortran community.
+
