@@ -30,7 +30,7 @@ Installation and Usage
 This will produce an executable named 'optimize_alkane'.
 
 2. Run the Program:
-Provide the '.mol2' file path as input (here for instance 'ethane.mol2') after executing the 'optimize_alkanes':
+Provide the '.mol2' file path as input (here for instance 'ethane.mol2') after executing the 'optimize_alkane':
 
 > ./optimize_alkane
 
